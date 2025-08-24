@@ -1,0 +1,11 @@
+name: FunCooldowns
+version: '1.3'
+main: me.jetby.cmdTimer.Main
+api-version: '1.16'
+authors: [ TreexStudio ]
+website: https://dsc.gg/treexstudio
+commands:
+  cmdtimer-reload:
+    aliases:
+      - funcooldowns
+      - fc

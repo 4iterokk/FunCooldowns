@@ -1,0 +1,67 @@
+# В Actions доступны
+# [PLAYER] cmd
+# [CONSOLE] cmd
+# [SOUND] ITEM_TRIDENT_THUNDER -volume:1.0f -pitch:1.0f
+# [EFFECT] BLINDNESS -duration:1 -strength:0
+# [TITLE] Title;Subtitle -fadeIn:1 -stay:3 -fadeOut:1
+# [MESSAGE] Сообщение
+# [ACTIONBAR] Текст
+# [BUTTON] Кнопка с отменой телепорта
+#
+# Для commands:
+# Если добавить команду, то кулдаун будет только на команду, обходится аргументами
+#
+# [rtp!] символ значит кулдаун будет на команду и все аргументы
+#
+# [cmi warp !] символ и пробел значит кулдаун будет на аргументы после команды.
+#
+
+commands:
+  - cmi spawn
+  - rtp!
+  - cmi warp !
+  - cmi home !
+
+
+Timer:
+  # Можно создать неограниченное кол-во пермишенов.
+  # Напримере donate2 пермишеном будет funcooldowns.donate2
+  admin: 0
+  donate2: 3 # Кулдан для тех у кого есть пермишен donate2
+  default: 7 # Стандартный кулдаун
+
+CancelOnMobDamage: false
+CancelOnPlayerDamage: true
+
+
+# Миры в которых не будет кулдауна
+disabled-worlds:
+  - disabled_world
+
+disabled-regions: # регионы WorldGuard в которых команды не будут работать
+  - pvp_arena
+
+# Выключение урона в мирах, полезно на спавне чтобы игроки не мешали другим телепортироваться
+Damage-Disabled-Worlds:
+  - spawn
+
+BossBar:
+  countdown: "&b⌚ &fТелепортация через &b{timer} &f{seconds}"
+  Color: BLUE
+  Style: SOLID
+
+actions:
+  start:
+    - '[MESSAGE] &c[⚝] &fТелепортация через &c%time% &fсек'
+    - '[MESSAGE] &c[⚝] &fНе получайте &cурон &fот игроков!'
+    - '[BUTTON]         &x&F&B&0&0&0&0[Отменить телепорт]'
+  cancel:
+    - '[MESSAGE] &c[✘] &fТелепортация отменена!'
+  end:
+    - '[SOUND] ITEM_TRIDENT_THUNDER'
+    - '[EFFECT] BLINDNESS'
+
+messages:
+  nothing: "&c[✘] У Вас нет активных телепортаций"
+  reload: "&aПлагин перезагружен!"
+  noperm: "&cНедостаточно прав!"

@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="FunCooldowns:jar">
+    <output-path>$USER_HOME$/Desktop/my pl</output-path>
+    <root id="archive" name="FunCooldowns.jar">
+      <element id="module-output" name="FunCooldowns" />
+    </root>
+  </artifact>
+</component>
