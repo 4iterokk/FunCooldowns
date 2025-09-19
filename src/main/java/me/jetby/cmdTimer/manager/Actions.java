@@ -27,11 +27,16 @@ public class Actions {
                 break;
             }
             case "[BUTTON]": {
-                // Исправляем обработку кнопки
-                String text = hex(color(withoutCMD)); // Сначала применяем цвет, затем hex
-                TextComponent msg = new TextComponent(text);
-                msg.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cancelTeleport));
-                player.spigot().sendMessage(msg); // Отправляем просто сообщение, не указывая тип
+                String text = hex(color(withoutCMD));
+
+                net.kyori.adventure.text.Component adventureComponent =
+                        net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(text);
+
+                adventureComponent = adventureComponent.clickEvent(
+                        net.kyori.adventure.text.event.ClickEvent.runCommand(cancelTeleport)
+                );
+
+                player.sendMessage(adventureComponent);
                 break;
             }
             case "[PLAYER]": {
@@ -43,8 +48,11 @@ public class Actions {
                 break;
             }
             case "[ACTIONBAR]": {
-                player.spigot().sendMessage(ChatMessageType.ACTION_BAR,
-                        TextComponent.fromLegacyText(color(withoutCMD.replace("%player%", player.getName()))));
+                net.kyori.adventure.text.Component actionbarComponent =
+                        net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand()
+                                .deserialize(color(withoutCMD.replace("%player%", player.getName())));
+
+                player.sendActionBar(actionbarComponent);
                 break;
             }
             case "[SOUND]": {
@@ -64,7 +72,6 @@ public class Actions {
                     Sound sound = Sound.valueOf(args[1]);
                     player.playSound(player.getLocation(), sound, volume, pitch);
                 } catch (IllegalArgumentException e) {
-                    // Неправильное название звука
                 }
                 break;
             }
@@ -87,7 +94,6 @@ public class Actions {
                         player.addPotionEffect(new PotionEffect(effectType, duration * 20, strength));
                     }
                 } catch (IllegalArgumentException e) {
-                    // Неправильное название эффекта
                 }
                 break;
             }
@@ -98,7 +104,6 @@ public class Actions {
                 int stay = 3;
                 int fadeOut = 1;
 
-                // Создаем копию для обработки
                 String processedCMD = withoutCMD;
 
                 for (String arg : args) {
@@ -126,7 +131,24 @@ public class Actions {
                         subTitle = message[1];
                     }
                 }
-                player.sendTitle(title, subTitle, fadeIn * 20, stay * 20, fadeOut * 20);
+
+                net.kyori.adventure.text.Component titleComponent =
+                        net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(title);
+
+                net.kyori.adventure.text.Component subtitleComponent =
+                        net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(subTitle);
+
+                net.kyori.adventure.title.Title adventureTitle = net.kyori.adventure.title.Title.title(
+                        titleComponent,
+                        subtitleComponent,
+                        net.kyori.adventure.title.Title.Times.times(
+                                java.time.Duration.ofMillis(fadeIn * 50),
+                                java.time.Duration.ofMillis(stay * 50),
+                                java.time.Duration.ofMillis(fadeOut * 50)
+                        )
+                );
+
+                player.showTitle(adventureTitle);
                 break;
             }
         }
