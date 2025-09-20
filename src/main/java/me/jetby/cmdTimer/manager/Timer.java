@@ -34,12 +34,10 @@ public class Timer {
     public void startTimer(Player player, String command, int time) {
         UUID playerId = player.getUniqueId();
 
-        // Отменяем существующий таймер, если он есть
         if (activeTimers.containsKey(playerId)) {
             cancelTimer(player);
         }
 
-        // Удаляем старый BossBar, если он существует
         if (playerBossBars.containsKey(playerId)) {
             playerBossBars.get(playerId).removeAll();
             playerBossBars.remove(playerId);
@@ -63,7 +61,6 @@ public class Timer {
             public void run() {
                 UUID playerId = player.getUniqueId();
 
-                // Проверяем, существует ли еще таймер для этого игрока
                 if (!activeTimers.containsKey(playerId)) {
                     this.cancel();
                     return;
@@ -72,7 +69,6 @@ public class Timer {
                 Integer currentCountdown = playerCountdowns.get(playerId);
                 Integer initialTime = playerInitialTimes.get(playerId);
 
-                // Проверяем, не null ли значение
                 if (currentCountdown == null || initialTime == null) {
                     this.cancel();
                     Bukkit.getScheduler().runTask(plugin, () -> {
@@ -88,7 +84,7 @@ public class Timer {
                 }
 
                 if (currentCountdown > 0) {
-                    // Обновляем BossBar
+
                     Bukkit.getScheduler().runTask(plugin, () -> {
                         if (!activeTimers.containsKey(playerId)) {
                             return;
@@ -134,11 +130,9 @@ public class Timer {
     public void cancelTimer(Player player) {
         UUID playerId = player.getUniqueId();
         if (activeTimers.containsKey(playerId)) {
-            // Отменяем задачу сразу
             activeTimers.get(playerId).cancel();
 
             Bukkit.getScheduler().runTask(plugin, () -> {
-                // Удаляем из мап
                 activeTimers.remove(playerId);
 
                 if (playerBossBars.containsKey(playerId)) {
