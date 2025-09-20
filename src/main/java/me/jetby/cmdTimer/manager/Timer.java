@@ -23,6 +23,7 @@ public class Timer {
     private final Map<UUID, BukkitTask> activeTimers = new HashMap<>();
     private final Map<UUID, BossBar> playerBossBars = new HashMap<>();
     private final Map<UUID, Integer> playerCountdowns = new HashMap<>();
+    private final Map<UUID, Integer> playerInitialTimes = new HashMap<>();
 
     private final Main plugin;
 
@@ -31,57 +32,113 @@ public class Timer {
     }
 
     public void startTimer(Player player, String command, int time) {
+        UUID playerId = player.getUniqueId();
+
+        // Отменяем существующий таймер, если он есть
+        if (activeTimers.containsKey(playerId)) {
+            cancelTimer(player);
+        }
+
+        // Удаляем старый BossBar, если он существует
+        if (playerBossBars.containsKey(playerId)) {
+            playerBossBars.get(playerId).removeAll();
+            playerBossBars.remove(playerId);
+        }
+
         BossBar bossBar = Bukkit.createBossBar(
-                CFG().getString("BossBar.countdown").replace('&', '§'),
+                CFG().getString("BossBar.countdown")
+                        .replace("{timer}", String.valueOf(time))
+                        .replace('&', '§'),
                 BarColor.valueOf(CFG().getString("BossBar.Color")),
                 BarStyle.valueOf(CFG().getString("BossBar.Style"))
         );
         bossBar.addPlayer(player);
-        playerBossBars.put(player.getUniqueId(), bossBar);
-        playerCountdowns.put(player.getUniqueId(), time);
+        bossBar.setVisible(true);
+        playerBossBars.put(playerId, bossBar);
+        playerCountdowns.put(playerId, time);
+        playerInitialTimes.put(playerId, time);
 
-        BukkitTask task = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> {
-            UUID playerId = player.getUniqueId();
-            int currentCountdown = playerCountdowns.get(playerId);
+        BukkitTask task = new BukkitRunnable() {
+            @Override
+            public void run() {
+                UUID playerId = player.getUniqueId();
 
-            if (currentCountdown > 0) {
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    double progress = currentCountdown / (double) time;
-                    bossBar.setProgress(progress);
-                    bossBar.setTitle(CFG().getString("BossBar.countdown")
-                            .replace('&', '§')
-                            .replace("{timer}", String.valueOf(currentCountdown)));
-                });
+                // Проверяем, существует ли еще таймер для этого игрока
+                if (!activeTimers.containsKey(playerId)) {
+                    this.cancel();
+                    return;
+                }
 
-                playerCountdowns.put(playerId, currentCountdown - 1);
+                Integer currentCountdown = playerCountdowns.get(playerId);
+                Integer initialTime = playerInitialTimes.get(playerId);
 
-            } else {
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    bossBar.removeAll();
-                    activeTimers.remove(playerId);
-                    playerBossBars.remove(playerId);
-                    playerCountdowns.remove(playerId);
+                // Проверяем, не null ли значение
+                if (currentCountdown == null || initialTime == null) {
+                    this.cancel();
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        activeTimers.remove(playerId);
+                        if (playerBossBars.containsKey(playerId)) {
+                            playerBossBars.get(playerId).removeAll();
+                            playerBossBars.remove(playerId);
+                        }
+                        playerCountdowns.remove(playerId);
+                        playerInitialTimes.remove(playerId);
+                    });
+                    return;
+                }
 
-                    Bukkit.dispatchCommand(player, command);
+                if (currentCountdown > 0) {
+                    // Обновляем BossBar
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        if (!activeTimers.containsKey(playerId)) {
+                            return;
+                        }
 
-                    List<String> actions = CFG().getStringList("actions.end");
-                    for (String action : actions) {
-                        plugin.getActions().execute(player, action.replace("%time%", String.valueOf(time)));
-                    }
-                });
+                        double progress = (double) currentCountdown / initialTime;
+                        bossBar.setProgress(progress);
+                        bossBar.setTitle(CFG().getString("BossBar.countdown")
+                                .replace('&', '§')
+                                .replace("{timer}", String.valueOf(currentCountdown)));
+                    });
 
-                Bukkit.getScheduler().cancelTask(activeTimers.get(playerId).getTaskId());
+                    playerCountdowns.put(playerId, currentCountdown - 1);
+
+                } else {
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        if (!activeTimers.containsKey(playerId)) {
+                            return;
+                        }
+
+                        bossBar.removeAll();
+                        activeTimers.remove(playerId);
+                        playerBossBars.remove(playerId);
+                        playerCountdowns.remove(playerId);
+                        playerInitialTimes.remove(playerId);
+
+                        Bukkit.dispatchCommand(player, command);
+
+                        List<String> actions = CFG().getStringList("actions.end");
+                        for (String action : actions) {
+                            plugin.getActions().execute(player, action.replace("%time%", String.valueOf(time)));
+                        }
+                    });
+
+                    this.cancel();
+                }
             }
-        }, 0, 20);
+        }.runTaskTimer(plugin, 0, 20);
 
-        activeTimers.put(player.getUniqueId(), task);
+        activeTimers.put(playerId, task);
     }
 
     public void cancelTimer(Player player) {
         UUID playerId = player.getUniqueId();
         if (activeTimers.containsKey(playerId)) {
+            // Отменяем задачу сразу
+            activeTimers.get(playerId).cancel();
+
             Bukkit.getScheduler().runTask(plugin, () -> {
-                activeTimers.get(playerId).cancel();
+                // Удаляем из мап
                 activeTimers.remove(playerId);
 
                 if (playerBossBars.containsKey(playerId)) {
@@ -90,6 +147,7 @@ public class Timer {
                 }
 
                 playerCountdowns.remove(playerId);
+                playerInitialTimes.remove(playerId);
 
                 List<String> actions = CFG().getStringList("actions.cancel");
                 for (String action : actions) {
